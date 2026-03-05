@@ -6,11 +6,13 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import PingReducerReducer from "../ping_reducer_reducer";
 import RespawnReducer from "../respawn_reducer";
 import SendMessageReducer from "../send_message_reducer";
 import SetDirectionReducer from "../set_direction_reducer";
 import SetNameReducer from "../set_name_reducer";
 
+export type PingReducerParams = __Infer<typeof PingReducerReducer>;
 export type RespawnParams = __Infer<typeof RespawnReducer>;
 export type SendMessageParams = __Infer<typeof SendMessageReducer>;
 export type SetDirectionParams = __Infer<typeof SetDirectionReducer>;

@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import PingReducerReducer from "./ping_reducer_reducer";
 import RespawnReducer from "./respawn_reducer";
 import SendMessageReducer from "./send_message_reducer";
 import SetDirectionReducer from "./set_direction_reducer";
@@ -44,6 +45,7 @@ import SetNameReducer from "./set_name_reducer";
 // Import all table schema definitions
 import MessageRow from "./message_table";
 import PelletRow from "./pellet_table";
+import PingRow from "./ping_table";
 import SnakeRow from "./snake_table";
 import UserRow from "./user_table";
 
@@ -69,6 +71,17 @@ const tablesSchema = __schema({
       { name: 'pellet_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, PelletRow),
+  ping: __table({
+    name: 'ping',
+    indexes: [
+      { name: 'identity', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+    ],
+    constraints: [
+      { name: 'ping_identity_key', constraint: 'unique', columns: ['identity'] },
+    ],
+  }, PingRow),
   snake: __table({
     name: 'snake',
     indexes: [
@@ -95,6 +108,7 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("ping_reducer", PingReducerReducer),
   __reducerSchema("respawn", RespawnReducer),
   __reducerSchema("send_message", SendMessageReducer),
   __reducerSchema("set_direction", SetDirectionReducer),

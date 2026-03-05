@@ -66,7 +66,7 @@ const pellet = table(
 const gameTick = table(
   {
     name: "game_tick",
-    scheduled: () => run_game_tick,
+    scheduled: (): any => run_game_tick,
   },
   {
     scheduledId: t.u64().primaryKey().autoInc(),
@@ -83,6 +83,15 @@ const spawnCounter = table(
   },
 );
 
+// Ping: client sends clientSentMicros, server stores it; client computes RTT when row updates
+const ping = table(
+  { name: "ping", public: true },
+  {
+    identity: t.identity().primaryKey(),
+    clientSentMicros: t.u64(),
+  },
+);
+
 const spacetimedb = schema({
   user,
   message,
@@ -90,6 +99,7 @@ const spacetimedb = schema({
   pellet,
   gameTick,
   spawnCounter,
+  ping,
 });
 export default spacetimedb;
 
@@ -277,13 +287,7 @@ export const run_game_tick = spacetimedb.reducer(
         nextDirection: undefined,
       });
     }
-
-    // Schedule next tick
-    const nextTime = ctx.timestamp.microsSinceUnixEpoch + TICK_INTERVAL_MICROS;
-    ctx.db.gameTick.insert({
-      scheduledId: 0n,
-      scheduledAt: ScheduleAt.time(nextTime),
-    });
+    // Next tick runs automatically via ScheduleAt.interval on the single gameTick row
   },
 );
 
@@ -317,6 +321,18 @@ export const send_message = spacetimedb.reducer(
       text,
       sent: ctx.timestamp,
     });
+  },
+);
+
+export const ping_reducer = spacetimedb.reducer(
+  { clientSentMicros: t.u64() },
+  (ctx, { clientSentMicros }) => {
+    const row = ctx.db.ping.identity.find(ctx.sender);
+    if (row) {
+      ctx.db.ping.identity.update({ ...row, clientSentMicros });
+    } else {
+      ctx.db.ping.insert({ identity: ctx.sender, clientSentMicros });
+    }
   },
 );
 
@@ -407,13 +423,12 @@ export const onConnect = spacetimedb.clientConnected((ctx) => {
     }
   }
 
-  // Ensure game tick is scheduled (only one row at a time)
+  // Ensure game tick is scheduled: one row with interval so local server ticks every 150ms
   const tickRows = [...ctx.db.gameTick.iter()];
   if (tickRows.length === 0) {
-    const nextTime = ctx.timestamp.microsSinceUnixEpoch + TICK_INTERVAL_MICROS;
     ctx.db.gameTick.insert({
       scheduledId: 0n,
-      scheduledAt: ScheduleAt.time(nextTime),
+      scheduledAt: ScheduleAt.interval(TICK_INTERVAL_MICROS),
     });
   }
 });

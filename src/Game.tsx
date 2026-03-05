@@ -181,15 +181,20 @@ class SnakeScene extends Phaser.Scene {
   }
 }
 
+const PING_INTERVAL_MS = 2000;
+
 export default function Game() {
   const [snakes] = useTable(tables.snake);
   const [pellets] = useTable(tables.pellet);
   const [users] = useTable(tables.user);
+  const [pingRows] = useTable(tables.ping);
   const setDirection = useReducer(reducers.setDirection);
   const setName = useReducer(reducers.setName);
   const respawn = useReducer(reducers.respawn);
+  const pingReducer = useReducer(reducers.pingReducer);
   const { identity, isActive: connected } = useSpacetimeDB();
   const [nameInput, setNameInput] = useState("");
+  const [pingMs, setPingMs] = useState<number | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const myIdentityHex = identity?.toHexString() ?? "";
   const identityToName: Record<string, string> = {};
@@ -214,6 +219,33 @@ export default function Game() {
   const respawnRef = useRef(respawn);
   setDirectionRef.current = setDirection;
   respawnRef.current = respawn;
+
+  // Compute ping when our ping row updates (round-trip time in ms)
+  const myPingRow = identity
+    ? pingRows.find((r) => r.identity.toHexString() === myIdentityHex)
+    : undefined;
+  useEffect(() => {
+    if (!myPingRow) return;
+    const rtt = Math.round(
+      Date.now() - Number(myPingRow.clientSentMicros) / 1000
+    );
+    setPingMs((prev) =>
+      prev === null ? rtt : Math.round(prev * 0.2 + rtt * 0.8)
+    );
+  }, [myPingRow?.clientSentMicros]);
+
+  // Send ping periodically so server echoes back clientSentMicros
+  useEffect(() => {
+    if (!connected || !identity) return;
+    const sendPing = () => {
+      pingReducer({
+        clientSentMicros: BigInt(Date.now()) * 1000n,
+      });
+    };
+    sendPing();
+    const id = setInterval(sendPing, PING_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [connected, identity, pingReducer]);
 
   useEffect(() => {
     dataRef.current = {
@@ -326,11 +358,18 @@ export default function Game() {
             </form>
           )}
         </span>
-        {isDead && (
-          <span className="game-respawn-hint">
-            You died — Press <kbd>R</kbd> to respawn
-          </span>
-        )}
+        <span className="game-topbar-right">
+          {pingMs !== null && (
+            <span className="game-ping" title="Round-trip latency to server">
+              {pingMs} ms
+            </span>
+          )}
+          {isDead && (
+            <span className="game-respawn-hint">
+              You died — Press <kbd>R</kbd> to respawn
+            </span>
+          )}
+        </span>
       </div>
       <div id="game-container" />
     </div>

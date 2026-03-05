@@ -30,6 +30,12 @@ export const Pellet = __t.object("Pellet", {
 });
 export type Pellet = __Infer<typeof Pellet>;
 
+export const Ping = __t.object("Ping", {
+  identity: __t.identity(),
+  clientSentMicros: __t.u64(),
+});
+export type Ping = __Infer<typeof Ping>;
+
 export const Snake = __t.object("Snake", {
   identity: __t.identity(),
   get body() {

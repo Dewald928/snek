@@ -15,3 +15,9 @@ This starts the local SpacetimeDB server, publishes the module, and runs the Vit
 ## Controls
 
 Arrow keys or WASD to change direction.
+
+## Local development
+
+Change the VITE_SPACETIMEDB_HOST=ws://localhost:3000
+
+and do `spacetime start --in-memory`
